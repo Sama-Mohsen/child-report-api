@@ -1,7 +1,6 @@
-from flask import Flask, request, send_file
-import io
+from flask import Flask, request, jsonify
 import os
-from datetime import datetime
+import json
 from ParentsReports import Report
 
 app = Flask(__name__)
@@ -10,30 +9,45 @@ app = Flask(__name__)
 def generate_report_endpoint():
     data = request.get_json()
 
+    # Validate input
     if not data or 'token' not in data:
-        return {"error": "Token is required"}, 400
+        return jsonify({
+            "status": "error",
+            "message": "Token is required"
+        }), 400
 
     user_token = data['token']
 
     try:
+        # Generate report
         report_text = Report(user_token)
 
-        file_stream = io.BytesIO()
-        file_stream.write(report_text.encode('utf-8'))
-        file_stream.seek(0)
+        # 👇 Handle error from Report (NEW)
+        if isinstance(report_text, dict) and "error" in report_text:
+            return jsonify({
+                "status": "error",
+                "message": report_text["error"]
+            }), 401
 
-        from flask import Response
+        # Convert string → JSON
+        report_json = json.loads(report_text)
 
-        return Response(
-            report_text,
-            mimetype="text/plain",
-            headers={
-                "Content-Disposition": f"attachment; filename=child_weekly_report_{datetime.now().date()}.txt"
-            }
-        )
+        return jsonify({
+            "status": "success",
+            "data": report_json
+        })
+
+    except json.JSONDecodeError:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid JSON format from AI response"
+        }), 500
 
     except Exception as e:
-        return {"error": str(e)}, 500
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 
 if __name__ == '__main__':
