@@ -7,32 +7,38 @@ import requests
 import json
 from datetime import datetime, timezone, timedelta
 
-API_URL = "https://graduationproject-production-e0b1.up.railway.app/api/chat/withMessages/all"
-
 load_dotenv()
+
+BACKEND_INTERNAL_URL = (
+    "https://graduationproject-production-9e7f.up.railway.app/api/chat/internal/conversations"
+)
+
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 
 client = genai.Client(
         api_key=os.getenv("GEMINI_API_KEY"),
     )
 
-def fetch_conversations(user_token):
-    JWT_TOKEN = user_token
-    headers = {
-        "Authorization": f"Bearer {JWT_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.get(API_URL, headers=headers)
-
-    if response.status_code == 200:
+def fetch_conversations(user_id):
+    try:
+        response = requests.post(
+            BACKEND_INTERNAL_URL,
+            json={
+                "userId": user_id
+            },
+            headers={
+                "x-internal-key": INTERNAL_API_KEY,
+                "Content-Type": "application/json"
+            },
+            timeout=30
+        )
+        response.raise_for_status()
         data = response.json()
-        # data = response
         print("Fetch Conversations Succeed")
         return data
-    else:
-        # print("Error:", response.status_code)
-        print(f'''Error: {response.status_code}\n{response.text}''')
-        return f'''Error: {response.status_code}\n{response.text}'''
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"error": "unable_to_fetch_conversations"}
 
 def format_previous_messages(conv, start_of_week, end_of_week):
     messages = sorted(conv["messages"], key=lambda m: m["createdAt"])
@@ -222,18 +228,16 @@ Return the response strictly in valid JSON format like:
     return "Error: Unable to generate the report right now."
 
 
-def Report(user_token):
-    history=fetch_conversations(user_token)
-    if isinstance(history, str) and history.startswith("Error"):
-        return {"error": "invalid_token or expired token"}
+def Report(user_id):
+    history=fetch_conversations(user_id)
+    if isinstance(history, dict) and "error" in history:
+        print(history['error'])
+        return {"error": "unable_to_generate_report_rightnow"}
     filter_this_week(history)
     conversations = format_conversations(history)
     try:
         report = generate_report(conversations)
-
-        import json
         json.loads(report)
-
         return report
 
     except Exception:
