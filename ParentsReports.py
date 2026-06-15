@@ -72,7 +72,7 @@ def format_conversations(history):
             if msg["sender"] == "user":
                 formatted_conversations += f"User: {msg['message']}\n"
         formatted_conversations += "\n"
-    # print(formatted_conversations)
+    print(formatted_conversations)
     return formatted_conversations
 
 def generate_report(conversations):
