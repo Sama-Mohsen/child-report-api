@@ -241,6 +241,7 @@ def Report(user_id):
     try:
         report = generate_report(conversations)
         json.loads(report)
+        print("Report generated successfully.")
         return report
 
     except Exception:
