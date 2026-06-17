@@ -100,7 +100,11 @@ def format_conversations(history):
             if msg["sender"] == "user":
                 formatted_conversations += f"User: {msg['message']}\n"
         formatted_conversations += "\n"
-    # print(formatted_conversations)
+
+    print("+" * 20)
+    print("Formatted Conversations: ")
+    print(formatted_conversations)
+    print("+" * 20)
     return formatted_conversations
 
 def generate_report(conversations):
@@ -227,13 +231,12 @@ Return the response strictly in valid JSON format like:
             time.sleep(2)
     return "Error: Unable to generate the report right now."
 
-
 def Report(user_id):
     history=fetch_conversations(user_id)
     if isinstance(history, dict) and "error" in history:
         print(history['error'])
         return {"error": "unable_to_generate_report_rightnow"}
-    filter_this_week(history)
+    history = filter_this_week(history)
     conversations = format_conversations(history)
     try:
         report = generate_report(conversations)
